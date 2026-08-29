@@ -20,13 +20,14 @@ bazi-engine-kit/
 ## 一、传到 Mac
 
 ```bash
-# 方式A（推荐）：走 git
-git init && git add -A && git commit -m "bazi-engine-kit"
-git remote add origin <你的私有仓库> && git push -u origin main
-# Mac 上 git clone
+# 方式A（推荐，SSH 已配通）：Mac 上先本机生成钥匙并加到 GitHub
+ssh-keygen -t ed25519 -N "" -C "he176-sketch-mac"
+cat ~/.ssh/id_ed25519.pub   # 粘贴到 github.com/settings/keys → New SSH key
+# 中国网络建议 ~/.ssh/config 加：Host github.com / HostName ssh.github.com / Port 443 / User git
+git clone git@github.com:he176-sketch/bazi-engine-kit.git && cd bazi-engine-kit
 
-# 方式B：直接打包
-# Windows: 压缩 bazi-engine-kit 文件夹 → AirDrop/网盘 → Mac 解压
+# 方式B：仓库是 public，直接 https clone 或下 zip 也行
+git clone https://github.com/he176-sketch/bazi-engine-kit.git
 ```
 
 ## 二、Mac 环境准备
