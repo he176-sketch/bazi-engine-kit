@@ -1,8 +1,13 @@
-// server.mjs — 极简 MCP stdio Server：暴露 bazi_paipan 工具给 Codex / Claude / 任意 MCP 客户端
+// server.mjs — MCP stdio Server：暴露排盘 + 七大占卜工具给 Codex / Claude / 任意 MCP 客户端
 // Codex 接入：~/.codex/config.toml 里加 [mcp_servers.bazi] command="node" args=["<绝对路径>/mcp/server.mjs"]
 import { createInterface } from 'node:readline';
+import { execFile } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 import { paipan } from '../engine/paipan.mjs';
 import { analyze } from '../engine/analyze.mjs';
+
+const DIV_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'divination');
 
 function send(obj) { process.stdout.write(JSON.stringify(obj) + '\n'); }
 
@@ -24,26 +29,65 @@ const TOOL = {
   }
 };
 
+// 占卜类工具：node 子进程跑 divination/ 下对应脚本
+const DIV_TOOLS = [
+  { name: 'div_liuyao', script: 'liuyao.js', description: '六爻占卜：单事吉凶决断。args 可传 [爻码(6位数字,0=阳不动,1=阴不动,2=阳动,3=阴动), 问题]，不传则模拟摇卦。', example: ['010203', '婚姻'] },
+  { name: 'div_meihua', script: 'meihua.js', description: '梅花易数起卦。args 三选一：[] 时间起卦 / [数1,数2,数3] 报数起卦 / [方位1,方位2] 方位起卦。', example: ['3', '5', '8'] },
+  { name: 'div_qimen', script: 'qimen.js', description: '奇门遁甲排局。args 可传 [YYYY-MM-DD, 时辰(24h制,可选)]，不传用当前时间。', example: ['2026-08-29', '16'] },
+  { name: 'div_ziwei', script: 'ziwei.js', description: '紫微斗数命盘（知识库增强版，12宫/四化/格局）。args: [YYYY-MM-DD, 性别(男/女), 时间HH:mm(可选)]。', example: ['1993-03-10', '男', '23:45'] },
+  { name: 'div_marriage', script: 'marriage.js', description: '合婚分析（日主生克/纳音/干支合冲）。args: [名1, "四柱(空格分隔)", 名2, "四柱"]。', example: ['张三', '癸酉 乙卯 庚寅 戊子', '李四', '壬申 丙午 甲子 辛未'] },
+  { name: 'div_zhuanshi', script: 'zhuanshi.js', description: '择吉选日（建除十二神+彭祖百忌+多因子评分）。args: ["best"(可选), YYYY-MM, 活动类型(开业/搬家/签约/订婚/装修/出行/结婚/祭祀/求财/上任), 可选八字]。', example: ['best', '2026-09', '开业'] },
+  { name: 'div_daily', script: 'daily-fortune.js', description: '每日运程：综合指数、穿衣颜色、宜忌、吉时。args 可传 [八字]，不传为通用日运。', example: [] }
+];
+
+function runDiv(script, args) {
+  const argv = (args || []).map(String);
+  return new Promise(resolve => {
+    execFile(process.execPath, [path.join(DIV_DIR, script), ...argv], { cwd: DIV_DIR, maxBuffer: 1024 * 1024 }, (err, stdout, stderr) => {
+      resolve(stdout || stderr || (err ? String(err.message) : ''));
+    });
+  });
+}
+
 const rl = createInterface({ input: process.stdin });
-rl.on('line', line => {
+rl.on('line', async line => {
   let msg;
   try { msg = JSON.parse(line); } catch { return; }
   const { id, method } = msg;
   switch (method) {
     case 'initialize':
-      send({ jsonrpc: '2.0', id, result: { protocolVersion: '2024-11-05', capabilities: { tools: {} }, serverInfo: { name: 'bazi-engine', version: '0.1.0' } } });
+      send({ jsonrpc: '2.0', id, result: { protocolVersion: '2024-11-05', capabilities: { tools: {} }, serverInfo: { name: 'bazi-engine', version: '0.2.0' } } });
       break;
     case 'tools/list':
-      send({ jsonrpc: '2.0', id, result: { tools: [TOOL] } });
+      send({
+        jsonrpc: '2.0', id, result: {
+          tools: [TOOL, ...DIV_TOOLS.map(t => ({
+            name: t.name,
+            description: t.description,
+            inputSchema: { type: 'object', properties: { args: { type: 'array', items: { type: 'string' }, description: '位置参数，按工具说明顺序传入' } } }
+          }))]
+        }
+      });
       break;
     case 'tools/call': {
+      const name = msg.params?.name;
       const a = msg.params?.arguments || {};
-      try {
-        const r = paipan(a);
-        const an = analyze(r.chart);
-        send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: JSON.stringify({ ...r, analysis: an }, null, 2) }] } });
-      } catch (e) {
-        send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: '排盘失败: ' + e.message }], isError: true } });
+      if (name === 'bazi_paipan') {
+        try {
+          const r = paipan(a);
+          const an = analyze(r.chart);
+          send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: JSON.stringify({ ...r, analysis: an }, null, 2) }] } });
+        } catch (e) {
+          send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: '排盘失败: ' + e.message }], isError: true } });
+        }
+      } else {
+        const t = DIV_TOOLS.find(d => d.name === name);
+        if (!t) {
+          if (id !== undefined) send({ jsonrpc: '2.0', id, error: { code: -32601, message: 'Unknown tool: ' + name } });
+          break;
+        }
+        const out = await runDiv(t.script, a.args);
+        send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: out }] } });
       }
       break;
     }

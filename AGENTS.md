@@ -19,6 +19,18 @@
    node engine/paipan.mjs --cal lunar --date 1993-02-18 --time 23:45 --gender 1 --sect 2 --city 钟祥
    ```
    - `--sect 2`（默认）：23:00-24:00 日柱归当天；`--sect 1`：归次日（多数网站默认）。用户有流派偏好时以用户为准并声明。
+   - MCP 环境下直接调工具 `bazi_paipan`。
+3.5. **问事占卜**（问事线专用，一次一卦；卦象星曜同样只能来自脚本输出，禁止自编）：
+   ```bash
+   node divination/liuyao.js                          # 六爻：模拟摇卦；可传 [爻码6位, 问题]
+   node divination/meihua.js 3 5 8                    # 梅花：报数/时间/方位起卦
+   node divination/qimen.js 2026-08-29 16             # 奇门排局
+   node divination/ziwei.js 1993-03-10 男 23:45       # 紫微命盘
+   node divination/marriage.js 名1 "四柱" 名2 "四柱"   # 合婚
+   node divination/zhuanshi.js best 2026-09 开业      # 择吉（开业/搬家/签约/订婚/装修/出行/结婚/祭祀/求财/上任）
+   node divination/daily-fortune.js                   # 每日运程
+   ```
+   - MCP 环境下对应工具 `div_liuyao` / `div_meihua` / `div_qimen` / `div_ziwei` / `div_marriage` / `div_zhuanshi` / `div_daily`。
 4. **质检清单**（脚本输出后逐条核对）：
    - [ ] 真太阳时已校正？`trueSolar.corrections` 里的偏移量合理（钟祥约 −40 分钟量级）？
    - [ ] 1986–1991 出生且 5–9 月 → 夏令时是否扣回（`dstApplied`）？

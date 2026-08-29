@@ -1,6 +1,6 @@
 # bazi-engine-kit — 命理引擎迁移包（Windows → Mac Codex）
 
-规则引擎做"算"，LLM 做"读"。包含：排盘引擎、规则分析层、MCP Server、Codex 项目指令、回归测试。
+规则引擎做"算"，LLM 做"读"。包含：八字排盘引擎 + 七大占卜工具（六爻/梅花/奇门/紫微/合婚/择吉/日运）、MCP Server、Codex 项目指令、回归测试。
 
 ## 目录结构
 
@@ -12,7 +12,15 @@ bazi-engine-kit/
 ├── engine/
 │   ├── paipan.mjs         ← 排盘入口：公历/农历 + 真太阳时(含夏令时) + 早晚子时 sect 开关
 │   └── analyze.mjs        ← 十神/五行/强弱/格局/调候（节选）规则层
-├── mcp/server.mjs         ← MCP stdio Server（工具 bazi_paipan），Codex 可直接调用
+├── divination/            ← 七大占卜引擎（CommonJS，目录内 package.json 已声明）
+│   ├── liuyao.js          ← 六爻：node liuyao.js [爻码6位] [问题]
+│   ├── meihua.js          ← 梅花易数：报数/时间/方位起卦
+│   ├── qimen.js           ← 奇门遁甲：node qimen.js [YYYY-MM-DD] [时辰]
+│   ├── ziwei.js           ← 紫微斗数（知识库增强）：node ziwei.js YYYY-MM-DD 男|女 [HH:mm]
+│   ├── marriage.js        ← 合婚：node marriage.js 名1 "四柱" 名2 "四柱"
+│   ├── zhuanshi.js        ← 择吉：node zhuanshi.js [best] YYYY-MM 活动类型 [八字]
+│   └── daily-fortune.js   ← 每日运程
+├── mcp/server.mjs         ← MCP stdio Server（8 个工具：bazi_paipan + div_* 七件套）
 ├── prompts/system-prompt.md  ← LLM 解读层模板（接云雾/任意 OpenAI 兼容 API）
 └── tests/regression.mjs   ← 回归锚点：李鹤本命盘 3 组用例 + 夏令时/真太阳时校验
 ```
