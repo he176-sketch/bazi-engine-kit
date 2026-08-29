@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { paipan } from '../engine/paipan.mjs';
 import { analyze } from '../engine/analyze.mjs';
+import { retrieve, format } from '../rag/retrieve.mjs';
 
 const DIV_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'divination');
 
@@ -26,6 +27,20 @@ const TOOL = {
       lon: { type: 'number', description: '或直接给东经经度，优先于 city' }
     },
     required: ['date', 'time']
+  }
+};
+
+const CITE_TOOL = {
+  name: 'cite_lookup',
+  description: '古籍引文检索：按命盘特征关键词（如「庚金 卯月 正财 身弱」「伤官 配印」「六爻 动爻」）返回可引用的古籍原句（含出处）。用于给解读加一处点到为止的经典引用，提升质感与说服力。自动按术数门派路由书目（八字→滴天髓/子平真诠/穷通宝鉴；六爻→卜筮正宗；奇门→奇门遁甲统宗；紫微→紫微斗数全书）。',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      query: { type: 'string', description: '关键词，空格分隔，建议含日主+月令+格局+强弱，或卦爻术语' },
+      top: { type: 'number', description: '返回条数，默认 3（解读里实际只引 1-2 处）' },
+      domain: { type: 'string', enum: ['bazi', 'ziwei', 'qizheng', 'liuyao', 'qimen', 'daliuren'], description: '可选，强制指定门派' }
+    },
+    required: ['query']
   }
 };
 
@@ -56,12 +71,12 @@ rl.on('line', async line => {
   const { id, method } = msg;
   switch (method) {
     case 'initialize':
-      send({ jsonrpc: '2.0', id, result: { protocolVersion: '2024-11-05', capabilities: { tools: {} }, serverInfo: { name: 'bazi-engine', version: '0.2.0' } } });
+      send({ jsonrpc: '2.0', id, result: { protocolVersion: '2024-11-05', capabilities: { tools: {} }, serverInfo: { name: 'bazi-engine', version: '0.3.0' } } });
       break;
     case 'tools/list':
       send({
         jsonrpc: '2.0', id, result: {
-          tools: [TOOL, ...DIV_TOOLS.map(t => ({
+          tools: [TOOL, CITE_TOOL, ...DIV_TOOLS.map(t => ({
             name: t.name,
             description: t.description,
             inputSchema: { type: 'object', properties: { args: { type: 'array', items: { type: 'string' }, description: '位置参数，按工具说明顺序传入' } } }
@@ -79,6 +94,13 @@ rl.on('line', async line => {
           send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: JSON.stringify({ ...r, analysis: an }, null, 2) }] } });
         } catch (e) {
           send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: '排盘失败: ' + e.message }], isError: true } });
+        }
+      } else if (name === 'cite_lookup') {
+        try {
+          const rs = retrieve(a.query || '', { top: a.top || 3, domain: a.domain || null });
+          send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: JSON.stringify(rs, null, 2) + '\n\n格式化:\n' + (format(rs) || '（未命中引文）') }] } });
+        } catch (e) {
+          send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: '引文检索失败: ' + e.message }], isError: true } });
         }
       } else {
         const t = DIV_TOOLS.find(d => d.name === name);

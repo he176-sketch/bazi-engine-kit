@@ -46,8 +46,8 @@ report('initialize 返回 protocolVersion/serverInfo',
 send({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} });
 const list = await waitFor(2);
 const tools = list?.result?.tools || [];
-report('tools/list 恰好 8 个工具', tools.length === 8, '实际 ' + tools.length);
-const expected = ['bazi_paipan', 'div_liuyao', 'div_meihua', 'div_qimen', 'div_ziwei', 'div_marriage', 'div_zhuanshi', 'div_daily'];
+report('tools/list 恰好 9 个工具', tools.length === 9, '实际 ' + tools.length);
+const expected = ['bazi_paipan', 'cite_lookup', 'div_liuyao', 'div_meihua', 'div_qimen', 'div_ziwei', 'div_marriage', 'div_zhuanshi', 'div_daily'];
 const names = tools.map(t => t.name).sort();
 report('工具名与预期一致', JSON.stringify(names) === JSON.stringify([...expected].sort()), names.join(','));
 report('每个工具都有 description 与 inputSchema', tools.every(t => t.description && t.inputSchema), '');
@@ -79,6 +79,13 @@ for (const c of divCases) {
   const ok = !r?.error && text.length > 30 && (!c.expect || text.includes(c.expect));
   report(`tools/call ${c.name}`, ok, (text || JSON.stringify(r)).slice(0, 100));
 }
+
+// 4.5 tools/call — cite_lookup 古籍引文
+send({ jsonrpc: '2.0', id: 30, method: 'tools/call', params: { name: 'cite_lookup', arguments: { query: '庚金 卯月 正财 身弱', top: 2 } } });
+const cite = await waitFor(30);
+const citeText = cite?.result?.content?.[0]?.text || '';
+report('tools/call cite_lookup 返回引文', citeText.includes('《') && citeText.length > 50, citeText.slice(0, 100));
+report('cite_lookup 含格式化块', citeText.includes('格式化:'), '');
 
 // 5. 未知工具应报错
 send({ jsonrpc: '2.0', id: 20, method: 'tools/call', params: { name: 'no_such_tool', arguments: {} } });

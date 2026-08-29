@@ -1,16 +1,19 @@
 {
   "name": "bazi-engine-kit",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
-  "description": "命理引擎全量包：八字排盘 + 七大占卜（六爻/梅花/奇门/紫微/合婚/择吉/日运）+ MCP Server（8 工具）",
-  "engines": { "node": ">=20" },
+  "description": "命理引擎全量包：八字排盘 + 七大占卜 + 古籍引文检索(5070条) + MCP Server（9 工具）· 体验与情绪价值优先",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "test": "node tests/regression.mjs && node tests/divination.smoke.mjs && node tests/mcp.mjs",
+    "test": "node tests/regression.mjs && node tests/divination.smoke.mjs && node tests/rag.mjs && node tests/mcp.mjs",
     "test:engine": "node tests/regression.mjs",
     "test:divination": "node tests/divination.smoke.mjs",
     "test:mcp": "node tests/mcp.mjs",
-    "paipan": "node engine/paipan.mjs"
+    "paipan": "node engine/paipan.mjs",
+    "test:rag": "node tests/rag.mjs"
   },
   "dependencies": {
     "cantian-tymext": "^0.0.26",

@@ -9,6 +9,7 @@
 1. `CONTEXT.md` —— 项目上下文：青囊平台、mingli-benchmark 进度、用户偏好、锚点回归用例
 2. `prompts/system-prompt.md` —— 解读层输出规范：分流、5 段式、句式纪律、红线
 3. `knowledge/README.md` —— 紫微格局知识库 contract（改动 knowledge/ 前必读）
+4. `prompts/system-prompt.md` 第二节「引用原文」—— 引文频次/位置/格式/白话转译纪律（写解读前必读）
 
 读取后自我确认：`已加载上下文与解读规范，流派默认=晚子时 sect2 + 真太阳时 + 子平派`。
 若用户声明其他流派，以用户为准并在回答中声明。
@@ -42,6 +43,14 @@
    node divination/daily-fortune.js                   # 每日运程
    ```
    - MCP 环境下对应工具 `div_liuyao` / `div_meihua` / `div_qimen` / `div_ziwei` / `div_marriage` / `div_zhuanshi` / `div_daily`。
+3.6. **引文检索**（给解读加一处经典引用，体验差异化；纪律见 prompts/system-prompt.md 第二节）：
+   ```bash
+   node rag/retrieve.mjs "庚金 卯月 正财 身弱" --top 3      # 自动按门派路由书目
+   node rag/retrieve.mjs "六爻 动爻 世应" --top 2 --json    # JSON 输出
+   CITATIONS_DIR=<青囊>/outputs/citations node rag/build-index.mjs   # 重建引文库
+   ```
+   - MCP 工具 `cite_lookup`。
+   - **每篇解读只引 1–2 处**，引后必须白话转译并标出处；不得凭记忆写古籍原句。
 4. **质检清单**（脚本输出后逐条核对）：
    - [ ] 真太阳时已校正？`trueSolar.corrections` 里的偏移量合理（钟祥约 −40 分钟量级）？
    - [ ] 1986–1991 出生且 5–9 月 → 夏令时是否扣回（`dstApplied`）？

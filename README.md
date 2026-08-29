@@ -20,7 +20,8 @@ bazi-engine-kit/
 │   ├── marriage.js        ← 合婚：node marriage.js 名1 "四柱" 名2 "四柱"
 │   ├── zhuanshi.js        ← 择吉：node zhuanshi.js [best] YYYY-MM 活动类型 [八字]
 │   └── daily-fortune.js   ← 每日运程
-├── mcp/server.mjs         ← MCP stdio Server（8 个工具：bazi_paipan + div_* 七件套）
+├── rag/                   ← 古籍引文检索（citations.json 5070 条 + retrieve.mjs + build-index.mjs）
+├── mcp/server.mjs         ← MCP stdio Server（9 个工具：bazi_paipan + cite_lookup + div_* 七件套）
 ├── prompts/system-prompt.md  ← LLM 解读层模板（接云雾/任意 OpenAI 兼容 API）
 └── tests/regression.mjs   ← 回归锚点：李鹤本命盘 3 组用例 + 夏令时/真太阳时校验
 ```
@@ -43,7 +44,7 @@ git clone https://github.com/he176-sketch/bazi-engine-kit.git
 ```bash
 brew install node@22          # 或 nvm install 22
 cd bazi-engine-kit && npm i
-npm test                      # 必须全绿：引擎回归 23 + 占卜 smoke 15 + MCP 15 = 53 项
+npm test                      # 必须全绿：引擎 23 + 占卜 15 + 引文 31 + MCP 17 = 86 项
 ```
 
 ## 三、安装 Codex CLI（Mac）
