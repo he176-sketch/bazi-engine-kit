@@ -1,18 +1,19 @@
 {
   "name": "bazi-engine-kit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "八字排盘引擎 + MCP Server：规则引擎做算，LLM 做读",
-  "engines": {
-    "node": ">=20"
-  },
+  "description": "命理引擎全量包：八字排盘 + 七大占卜（六爻/梅花/奇门/紫微/合婚/择吉/日运）+ MCP Server（8 工具）",
+  "engines": { "node": ">=20" },
   "scripts": {
-    "test": "node tests/regression.mjs",
+    "test": "node tests/regression.mjs && node tests/divination.smoke.mjs && node tests/mcp.mjs",
+    "test:engine": "node tests/regression.mjs",
+    "test:divination": "node tests/divination.smoke.mjs",
+    "test:mcp": "node tests/mcp.mjs",
     "paipan": "node engine/paipan.mjs"
   },
   "dependencies": {
     "cantian-tymext": "^0.0.26",
-    "iztro": "^2.6.0"
+    "iztro": "^2.4.6"
   }
 }

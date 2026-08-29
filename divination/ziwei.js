@@ -12,8 +12,14 @@ const { astro } = require('iztro');
 // 知识库格局匹配系统
 // ============================================================
 
-const KNOWLEDGE_DIR = process.env.OPENCLAW_KNOWLEDGE_DIR
-  || (process.env.HOME ? path.join(process.env.HOME, '.openclaw/workspace/knowledge') : '');
+// 知识库加载优先级：项目内 knowledge/ → KNOWLEDGE_DIR → OPENCLAW_KNOWLEDGE_DIR → ~/.openclaw(旧路径兜底)
+const REPO_KNOWLEDGE_DIR = path.join(__dirname, '..', 'knowledge');
+const KNOWLEDGE_DIR = [
+  REPO_KNOWLEDGE_DIR,
+  process.env.KNOWLEDGE_DIR,
+  process.env.OPENCLAW_KNOWLEDGE_DIR,
+  process.env.HOME ? path.join(process.env.HOME, '.openclaw/workspace/knowledge') : null
+].filter(Boolean).find(d => fs.existsSync(d)) || REPO_KNOWLEDGE_DIR;
 
 /**
  * 解析知识库中的格局文件，构建模式检测规则

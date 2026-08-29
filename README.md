@@ -43,7 +43,7 @@ git clone https://github.com/he176-sketch/bazi-engine-kit.git
 ```bash
 brew install node@22          # 或 nvm install 22
 cd bazi-engine-kit && npm i
-npm test                      # 必须全绿（PASS 11 / FAIL 0）
+npm test                      # 必须全绿：引擎回归 10 + 占卜 smoke 15 + MCP 15 = 40 项
 ```
 
 ## 三、安装 Codex CLI（Mac）
@@ -101,4 +101,5 @@ node engine/paipan.mjs --cal lunar --date 1993-02-18 --time 23:45 --gender 1 --s
 
 - 均时差用解析近似（±30 秒）：真太阳时落在子时边界 ±3 分钟的临界盘，解读前必须提示用户复核出生时间
 - 调候表（analyze.mjs TIAOHOU）仅收录金日主节选，扩展时对照《穷通宝鉴》原文
-- 六爻/梅花/奇门尚未入包（源脚本在 fortune-master 插件里），需要时再移植
+- knowledge/ 为 6 篇格局种子数据（标注待校订），补齐格局库请按 knowledge/README.md 的 contract 扩展
+- 青囊 `packages/knowledge`（你自己的 TS 规则库，含 bazi/ziwei/liuyao/qimen rules）属独立项目，未并入本包
