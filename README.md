@@ -43,7 +43,7 @@ git clone https://github.com/he176-sketch/bazi-engine-kit.git
 ```bash
 brew install node@22          # 或 nvm install 22
 cd bazi-engine-kit && npm i
-npm test                      # 必须全绿：引擎回归 10 + 占卜 smoke 15 + MCP 15 = 40 项
+npm test                      # 必须全绿：引擎回归 23 + 占卜 smoke 15 + MCP 15 = 53 项
 ```
 
 ## 三、安装 Codex CLI（Mac）
@@ -79,7 +79,7 @@ args = ["/Users/你/bazi-engine-kit/mcp/server.mjs"]
 **方式B · 直接跑脚本**——AGENTS.md 已教会 Codex 自己调：
 
 ```bash
-node engine/paipan.mjs --cal lunar --date 1993-02-18 --time 23:45 --gender 1 --sect 2 --city 钟祥
+node engine/paipan.mjs --cal solar --date 2000-02-05 --time 14:00 --gender 1 --sect 2 --city 北京
 ```
 
 **AGENTS.md 放置**：仓库根目录已带（项目级）；若想全局生效（任何目录都懂命理规范），复制到 `~/.codex/AGENTS.md`。
@@ -93,8 +93,8 @@ node engine/paipan.mjs --cal lunar --date 1993-02-18 --time 23:45 --gender 1 --s
 ## 六、验证清单（迁移完成后依次确认）
 
 - [ ] `npm test` 全绿
-- [ ] `node engine/paipan.mjs --cal lunar --date 1993-02-18 --time 23:45 --city 钟祥` → 四柱「癸酉 乙卯 庚寅 戊子」
-- [ ] Codex 里问"1993年农历二月十八晚上23:45生于钟祥的男命"→ 它会先调 bazi_paipan / 跑脚本再解读，而不是直接编干支
+- [ ] `node engine/paipan.mjs --cal solar --date 2000-02-05 --time 14:00 --city 北京` → 四柱「庚辰 戊寅 癸巳 己未」
+- [ ] Codex 里问"2000年2月5日下午2点生于北京的男命"→ 它会先调 bazi_paipan / 跑脚本再解读，而不是直接编干支
 - [ ] `~/.codex/config.toml` 的 MCP 配置生效（codex 启动无报错）
 
 ## 已知边界

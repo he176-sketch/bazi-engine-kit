@@ -1,3 +1,4 @@
 node_modules/
 data/profiles/*.json
 !data/profiles/sample.json
+tests/fixtures.local.json

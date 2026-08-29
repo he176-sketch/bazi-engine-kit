@@ -53,12 +53,13 @@ report('工具名与预期一致', JSON.stringify(names) === JSON.stringify([...
 report('每个工具都有 description 与 inputSchema', tools.every(t => t.description && t.inputSchema), '');
 
 // 3. tools/call — bazi_paipan 返回 JSON
-send({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'bazi_paipan', arguments: { cal: 'lunar', date: '1993-02-18', time: '23:45', gender: 1, sect: 2, lon: 112.59 } } });
+// 使用公开锚点（2000 年春节），不写个人出生信息
+send({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'bazi_paipan', arguments: { cal: 'solar', date: '2000-02-05', time: '14:00', gender: 1, sect: 2, lon: 120 } } });
 const c1 = await waitFor(3);
 let parsed = null;
 try { parsed = JSON.parse(c1?.result?.content?.[0]?.text); } catch { /* noop */ }
 report('tools/call bazi_paipan 返回合法 JSON', !!parsed, JSON.stringify(c1).slice(0, 120));
-report('bazi_paipan 四柱 = 癸酉 乙卯 庚寅 戊子', parsed?.fourPillars === '癸酉 乙卯 庚寅 戊子', parsed?.fourPillars);
+report('bazi_paipan 四柱 = 庚辰 戊寅 癸巳 己未', parsed?.fourPillars === '庚辰 戊寅 癸巳 己未', parsed?.fourPillars);
 report('bazi_paipan 含 analysis（强弱/格局）', !!parsed?.analysis?.strength?.level && !!parsed?.analysis?.geju, '');
 
 // 4. tools/call — 七个占卜工具各调一次
@@ -66,8 +67,8 @@ const divCases = [
   { id: 10, name: 'div_liuyao', args: ['010203', '婚姻'], expect: '六爻' },
   { id: 11, name: 'div_meihua', args: ['3', '5', '8'], expect: '梅花' },
   { id: 12, name: 'div_qimen', args: ['2026-08-29', '16'], expect: '奇门' },
-  { id: 13, name: 'div_ziwei', args: ['1993-03-10', '男', '23:45'], expect: '紫微' },
-  { id: 14, name: 'div_marriage', args: ['张三', '癸酉 乙卯 庚寅 戊子', '李四', '壬申 丙午 甲子 辛未'], expect: '合婚' },
+  { id: 13, name: 'div_ziwei', args: ['2000-02-05', '男', '14:00'], expect: '紫微' },
+  { id: 14, name: 'div_marriage', args: ['甲', '庚辰 戊寅 癸巳 己未', '乙', '庚辰 甲申 丙子 乙未'], expect: '合婚' },
   { id: 15, name: 'div_zhuanshi', args: ['best', '2026-09', '开业'], expect: '' },
   { id: 16, name: 'div_daily', args: [], expect: '' }
 ];

@@ -38,15 +38,27 @@
    ```
 3. 验证：格局命中数由 0 → >0（测试 `紫微·知识库格局已加载` 守护该行为）
 
-## 三、测试体系（40 项，全绿）
+## 三、测试体系（53 项，全绿）
 
 | 套件 | 文件 | 项数 | 覆盖 |
 |---|---|---|---|
-| 引擎回归 | `tests/regression.mjs` | 10 | 四柱锚点(3) / 真太阳时 / 夏令时 / 日主 / 五行 / 十神(3) |
+| 引擎回归 | `tests/regression.mjs` | 23 | 农历↔公历桥接(6) / sect边界(2) / 真太阳时方向(3) / 夏令时(2) / 分析层(6) / 起运年龄(3) / 私密锚点(可选) |
 | 占卜 smoke | `tests/divination.smoke.mjs` | 15 | 六爻(2) 梅花(3) 奇门(2) 紫微(3，含知识库断言) 合婚 择吉(2) 日运 |
 | MCP 协议 | `tests/mcp.mjs` | 15 | initialize / tools/list(**断言恰好 8 工具**) / tools/call 八字+七占卜 / 未知工具报错 |
 
-## 四、未迁移 / 后续项
+## 四、隐私处理（v0.2.1）
+
+审计发现原测试与文档写有个人出生信息（出生日期/时间/地点），而仓库为 public。已全部清理：
+
+- `tests/regression.mjs` 锚点改为公开数据（春节日期）：农历↔公历桥接 / sect 边界 / 真太阳时方向 / 夏令时 / 起运年龄区间
+- `tests/mcp.mjs`、`README.md` 示例改为 2000-02-05 中性盘
+- `CONTEXT.md` 移除本命盘，改为说明"私密锚点走 tests/fixtures.local.json（已 gitignore）"
+- 新增 `tests/fixtures.local.example.json`：本地私密锚点模板，复制为 `tests/fixtures.local.json` 后测试套件自动加载（不进 git）
+- 个人命盘与咨询历史保留在 WorkBuddy 本地记忆（`.workbuddy/memory/`），不随公开仓库分发
+
+回归价值未降低：新锚点覆盖的 bug 类与旧锚点一致（sect 分歧、农历/公历混淆、真太阳时方向、夏令时漏扣），且项数由 10 增至 23。
+
+## 五、未迁移 / 后续项
 
 - knowledge 仅 6 篇种子，完整格局库（30–50 篇）待补
 - 青囊 TS 规则库未并入（可写生成脚本 → knowledge/*.md）
