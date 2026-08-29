@@ -46,8 +46,8 @@ report('initialize 返回 protocolVersion/serverInfo',
 send({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} });
 const list = await waitFor(2);
 const tools = list?.result?.tools || [];
-report('tools/list 恰好 9 个工具', tools.length === 9, '实际 ' + tools.length);
-const expected = ['bazi_paipan', 'cite_lookup', 'div_liuyao', 'div_meihua', 'div_qimen', 'div_ziwei', 'div_marriage', 'div_zhuanshi', 'div_daily'];
+report('tools/list 恰好 11 个工具', tools.length === 11, '实际 ' + tools.length);
+const expected = ['bazi_paipan', 'cite_lookup', 'div_liuyao', 'div_meihua', 'div_qimen', 'div_ziwei', 'div_marriage', 'div_zhuanshi', 'div_daily', 'div_daliuren', 'div_qizheng'];
 const names = tools.map(t => t.name).sort();
 report('工具名与预期一致', JSON.stringify(names) === JSON.stringify([...expected].sort()), names.join(','));
 report('每个工具都有 description 与 inputSchema', tools.every(t => t.description && t.inputSchema), '');
@@ -70,7 +70,9 @@ const divCases = [
   { id: 13, name: 'div_ziwei', args: ['2000-02-05', '男', '14:00'], expect: '紫微' },
   { id: 14, name: 'div_marriage', args: ['甲', '庚辰 戊寅 癸巳 己未', '乙', '庚辰 甲申 丙子 乙未'], expect: '合婚' },
   { id: 15, name: 'div_zhuanshi', args: ['best', '2026-09', '开业'], expect: '' },
-  { id: 16, name: 'div_daily', args: [], expect: '' }
+  { id: 16, name: 'div_daily', args: [], expect: '' },
+  { id: 17, name: 'div_daliuren', args: ['2026-08-29', '16'], expect: '大六壬' },
+  { id: 18, name: 'div_qizheng', args: ['2026-08-29', '18:00', '112.59'], expect: '七政' }
 ];
 for (const c of divCases) {
   send({ jsonrpc: '2.0', id: c.id, method: 'tools/call', params: { name: c.name, arguments: { args: c.args } } });

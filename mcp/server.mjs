@@ -52,7 +52,9 @@ const DIV_TOOLS = [
   { name: 'div_ziwei', script: 'ziwei.js', description: '紫微斗数命盘（知识库增强版，12宫/四化/格局）。args: [YYYY-MM-DD, 性别(男/女), 时间HH:mm(可选)]。', example: ['1993-03-10', '男', '23:45'] },
   { name: 'div_marriage', script: 'marriage.js', description: '合婚分析（日主生克/纳音/干支合冲）。args: [名1, "四柱(空格分隔)", 名2, "四柱"]。', example: ['张三', '癸酉 乙卯 庚寅 戊子', '李四', '壬申 丙午 甲子 辛未'] },
   { name: 'div_zhuanshi', script: 'zhuanshi.js', description: '择吉选日（建除十二神+彭祖百忌+多因子评分）。args: ["best"(可选), YYYY-MM, 活动类型(开业/搬家/签约/订婚/装修/出行/结婚/祭祀/求财/上任), 可选八字]。', example: ['best', '2026-09', '开业'] },
-  { name: 'div_daily', script: 'daily-fortune.js', description: '每日运程：综合指数、穿衣颜色、宜忌、吉时。args 可传 [八字]，不传为通用日运。', example: [] }
+  { name: 'div_daily', script: 'daily-fortune.js', description: '每日运程：综合指数、穿衣颜色、宜忌、吉时。args 可传 [八字]，不传为通用日运。', example: [] },
+  { name: 'div_daliuren', script: 'daliuren.cjs', description: '大六壬起课（基础版）：月将/天地盘/四课/九宗门三传/天将/六亲/遁干。args: [YYYY-MM-DD(可选), 时辰(地支或0-23,可选), 月将(可选)]。', example: ['2026-08-29', '16'] },
+  { name: 'div_qizheng', script: 'qizheng.cjs', description: '七政四余星盘：日月五星+四余的黄经/二十八宿/十二宫/宫主（astronomy-engine 天文计算）。args: [YYYY-MM-DD(可选), HH:mm(可选), 经度(可选)]。', example: ['2026-08-29', '18:00', '112.59'] }
 ];
 
 function runDiv(script, args) {
@@ -71,7 +73,7 @@ rl.on('line', async line => {
   const { id, method } = msg;
   switch (method) {
     case 'initialize':
-      send({ jsonrpc: '2.0', id, result: { protocolVersion: '2024-11-05', capabilities: { tools: {} }, serverInfo: { name: 'bazi-engine', version: '0.3.0' } } });
+      send({ jsonrpc: '2.0', id, result: { protocolVersion: '2024-11-05', capabilities: { tools: {} }, serverInfo: { name: 'bazi-engine', version: '0.4.0' } } });
       break;
     case 'tools/list':
       send({
