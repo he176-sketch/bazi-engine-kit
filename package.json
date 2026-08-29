@@ -1,0 +1,15 @@
+{
+  "name": "bazi-engine-kit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "八字排盘引擎 + MCP Server：规则引擎做算，LLM 做读",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node tests/regression.mjs",
+    "paipan": "node engine/paipan.mjs"
+  },
+  "dependencies": {
+    "cantian-tymext": "^0.0.26"
+  }
+}
