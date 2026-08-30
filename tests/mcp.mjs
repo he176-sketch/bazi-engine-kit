@@ -1,4 +1,4 @@
-// mcp.mjs — MCP 协议测试：initialize / tools/list（断言恰好 8 个工具）/ tools/call（每个工具各调一次）
+// mcp.mjs — MCP 协议测试：initialize / tools/list / tools/call（每个工具各调一次）
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -42,15 +42,27 @@ report('initialize 返回 protocolVersion/serverInfo',
   !!init?.result?.protocolVersion && init.result.serverInfo?.name === 'bazi-engine',
   JSON.stringify(init?.result || init).slice(0, 120));
 
-// 2. tools/list — 断言恰好 8 个工具
+// 2. tools/list
 send({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} });
 const list = await waitFor(2);
 const tools = list?.result?.tools || [];
-report('tools/list 恰好 11 个工具', tools.length === 11, '实际 ' + tools.length);
-const expected = ['bazi_paipan', 'cite_lookup', 'div_liuyao', 'div_meihua', 'div_qimen', 'div_ziwei', 'div_marriage', 'div_zhuanshi', 'div_daily', 'div_daliuren', 'div_qizheng'];
+report('tools/list 恰好 12 个工具', tools.length === 12, '实际 ' + tools.length);
+const expected = ['bazi_paipan', 'cite_lookup', 'div_liuyao', 'div_meihua', 'div_qimen', 'div_ziwei', 'div_marriage', 'div_zhuanshi', 'div_daily', 'div_daliuren', 'div_qizheng', 'div_qizheng_liunian'];
 const names = tools.map(t => t.name).sort();
 report('工具名与预期一致', JSON.stringify(names) === JSON.stringify([...expected].sort()), names.join(','));
 report('每个工具都有 description 与 inputSchema', tools.every(t => t.description && t.inputSchema), '');
+const qizhengTool = tools.find(t => t.name === 'div_qizheng');
+report('七政工具暴露专业出生与盘制字段',
+  ['birth_date', 'birth_time', 'birth_lon', 'birth_lat', 'time_type', 'xiu_method', 'node_arrangement', 'child_limit',
+    'day_night_method', 'dingxing_tolerance', 'tongluo_tolerance', 'distinguish_zi_hour'].every(k => qizhengTool?.inputSchema?.properties?.[k])
+    && qizhengTool.inputSchema.properties.node_calculation.enum.includes('fitted')
+    && qizhengTool.inputSchema.properties.xiu_method.enum.includes('guolao')
+    && qizhengTool.inputSchema.properties.ziqi_calculation.enum.includes('ecliptic_projection')
+    && qizhengTool.inputSchema.properties.jieqi_method.enum.includes('mean')
+    && qizhengTool.inputSchema.properties.date_type.enum.includes('lunar')
+    && qizhengTool.inputSchema.properties.ming_gong_method.enum.length === 4
+    && qizhengTool.inputSchema.properties.shen_gong_method.enum.length === 4,
+  JSON.stringify(qizhengTool?.inputSchema || {}).slice(0, 160));
 
 // 3. tools/call — bazi_paipan 返回 JSON
 // 使用公开锚点（2000 年春节），不写个人出生信息
@@ -81,6 +93,52 @@ for (const c of divCases) {
   const ok = !r?.error && text.length > 30 && (!c.expect || text.includes(c.expect));
   report(`tools/call ${c.name}`, ok, (text || JSON.stringify(r)).slice(0, 100));
 }
+
+// 4.1 七政专业调用返回可继续用于解读的结构化 JSON
+send({ jsonrpc: '2.0', id: 19, method: 'tools/call', params: { name: 'div_qizheng', arguments: {
+  birth_date: '2026-08-29', birth_time: '18:00', birth_lon: 112.59, birth_lat: 31.17,
+  timezone: 8, gender: 'male', xiu_method: 'huangdaohuigui', coord_system: 'huangdao',
+  node_arrangement: 'south_north', node_calculation: 'mean', apogee_calculation: 'mean', ziqi_calculation: 'ecliptic_projection',
+  time_type: 'wallclock', day_night_method: 'sunrise_sunset_shichen', dingxing_tolerance: 1.5,
+  tongluo_tolerance: 2, distinguish_zi_hour: true
+} } });
+const qizheng = await waitFor(19);
+let qizhengJson = null;
+try { qizhengJson = JSON.parse(qizheng?.result?.content?.[0]?.text); } catch { /* noop */ }
+report('七政专业调用返回 11 星、12 宫 JSON',
+  qizhengJson?.planets?.length === 11 && qizhengJson?.palaces?.length === 12,
+  (qizheng?.result?.content?.[0]?.text || '').slice(0, 120));
+report('七政输出声明引擎和未实现边界',
+  qizhengJson?.engine?.ephemeris === 'astronomy-engine' && qizhengJson?.engine?.limitations?.length > 0,
+  JSON.stringify(qizhengJson?.engine || {}).slice(0, 120));
+report('七政专业时制与昼夜参数已进入输出',
+  qizhengJson?.basic?.time_type === 'wallclock'
+    && qizhengJson?.basic?.day_night_method === 'sunrise_sunset_shichen'
+    && qizhengJson?.bottom_right?.day_night_method === 'sunrise_sunset_shichen',
+  JSON.stringify(qizhengJson?.basic || {}).slice(0, 160));
+report('七政本命输出含规则层和完整流年时间轴',
+  qizhengJson?.shensha?.shiyi_huayao && qizhengJson?.dongwei?.current && qizhengJson?.xiaoxian?.length === 120 && qizhengJson?.liunian_timeline?.length === 120
+    && qizhengJson?.shouzhao && qizhengJson?.tongluo && qizhengJson?.tongjing && qizhengJson?.yunu,
+  '');
+
+// 4.2 七政流年专业调用
+send({ jsonrpc: '2.0', id: 21, method: 'tools/call', params: { name: 'div_qizheng_liunian', arguments: {
+  birth_date: '1993-03-10', birth_time: '23:45', birth_lon: 112.58, birth_lat: 31.17,
+  timezone: 8, gender: 'male', xiu_method: 'huangdaohuigui', coord_system: 'huangdao',
+  node_calculation: 'fitted', apogee_calculation: 'fitted', liunian_year: 2026, liuyue: 6, liuri: 15, liushi: '12:00'
+} } });
+const qizhengFlow = await waitFor(21);
+let qizhengFlowJson = null;
+try { qizhengFlowJson = JSON.parse(qizhengFlow?.result?.content?.[0]?.text); } catch { /* noop */ }
+report('七政流年工具返回 11 流曜、12 月限与流年神煞',
+  qizhengFlowJson?.liunian_planets?.length === 11 && qizhengFlowJson?.liunian_yuexian?.length === 12 && qizhengFlowJson?.liunian_shensha?.nianzhi_shensha?.太岁 === '午',
+  (qizhengFlow?.result?.content?.[0]?.text || '').slice(0, 120));
+report('七政流年工具返回关系层与顶星',
+  qizhengFlowJson?.liunian_shouzhao && qizhengFlowJson?.liunian_tongluo
+    && qizhengFlowJson?.liunian_tongjing && qizhengFlowJson?.liunian_yunu
+    && Array.isArray(qizhengFlowJson?.dongwei?.natal_dingxing)
+    && Array.isArray(qizhengFlowJson?.dongwei?.liunian_dingxing),
+  '');
 
 // 4.5 tools/call — cite_lookup 古籍引文
 send({ jsonrpc: '2.0', id: 30, method: 'tools/call', params: { name: 'cite_lookup', arguments: { query: '庚金 卯月 正财 身弱', top: 2 } } });

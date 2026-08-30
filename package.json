@@ -3,7 +3,7 @@
   "version": "0.4.0",
   "private": true,
   "type": "module",
-  "description": "命理引擎全量包：八字排盘 + 九大术数（六爻/梅花/奇门/紫微/合婚/择吉/日运/大六壬/七政四余）+ 古籍引文检索 + MCP Server（11 工具）",
+  "description": "命理引擎全量包：八字排盘 + 九大术数（六爻/梅花/奇门/紫微/合婚/择吉/日运/大六壬/七政四余）+ 古籍引文检索 + MCP Server（12 工具）",
   "engines": {
     "node": ">=20"
   },
@@ -12,6 +12,7 @@
     "test:engine": "node tests/regression.mjs",
     "test:divination": "node tests/divination.smoke.mjs",
     "test:mcp": "node tests/mcp.mjs",
+    "validate:qizheng:external": "node divination/validate_vs_tianguan.cjs",
     "paipan": "node engine/paipan.mjs",
     "test:rag": "node tests/rag.mjs",
     "test:orientation": "node tests/orientation.mjs"
@@ -19,6 +20,7 @@
   "dependencies": {
     "astronomy-engine": "^2.1.19",
     "cantian-tymext": "^0.0.26",
-    "iztro": "^2.4.6"
+    "iztro": "^2.4.6",
+    "lunar-typescript": "^1.8.6"
   }
 }

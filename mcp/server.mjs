@@ -1,7 +1,8 @@
-// server.mjs — MCP stdio Server：暴露排盘 + 七大占卜工具给 Codex / Claude / 任意 MCP 客户端
+// server.mjs — MCP stdio Server：暴露排盘、引文检索与专业术数工具给 Codex / Claude / 任意 MCP 客户端
 // Codex 接入：~/.codex/config.toml 里加 [mcp_servers.bazi] command="node" args=["<绝对路径>/mcp/server.mjs"]
 import { createInterface } from 'node:readline';
 import { execFile } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { paipan } from '../engine/paipan.mjs';
@@ -9,6 +10,8 @@ import { analyze } from '../engine/analyze.mjs';
 import { retrieve, format } from '../rag/retrieve.mjs';
 
 const DIV_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'divination');
+const require = createRequire(import.meta.url);
+const { calculateChart: calculateQiZhengChart, calculateLiunian: calculateQiZhengLiunian } = require('../divination/qizheng.cjs');
 
 function send(obj) { process.stdout.write(JSON.stringify(obj) + '\n'); }
 
@@ -44,6 +47,56 @@ const CITE_TOOL = {
   }
 };
 
+const QIZHENG_SCHEMA = {
+  type: 'object',
+  properties: {
+    birth_date: { type: 'string', description: '公历出生日期 YYYY-MM-DD' },
+    birth_time: { type: 'string', description: '当地钟表时间 HH:mm[:ss]' },
+    birth_lon: { type: 'number', minimum: -180, maximum: 180, description: '出生地经度，东经为正' },
+    birth_lat: { type: 'number', minimum: -90, maximum: 90, description: '出生地纬度，北纬为正' },
+    timezone: { type: 'number', minimum: -14, maximum: 14, description: '当地时区；中国通常为 8' },
+    date_type: { type: 'string', enum: ['solar', 'lunar'], description: '日期类型：公历 solar 或农历 lunar；农历日期仍用 YYYY-MM-DD 表示农历年月日' },
+    time_type: { type: 'string', enum: ['wallclock', 'solar_time'], description: '墙上标准时，或已经换算好的真太阳时输入' },
+    gender: { type: 'string', enum: ['male', 'female'], description: '性别' },
+    name: { type: 'string', description: '可选姓名，仅回显在 basic' },
+    city: { type: 'string', description: '可选城市名，仅回显在 basic' },
+    xiu_method: { type: 'string', enum: ['huangdaohuigui', 'huigui_gusu', 'gusu_suicha', 'zhengan', 'chidao_jinxiu', 'chidao_gusu_suicha', 'chidao_zhengan', 'chidao_huigui_gusu', 'guolao'], description: '九种黄道/赤道今宿、古宿、郑案与果老盘制' },
+    coord_system: { type: 'string', enum: ['huangdao', 'chidao'], description: '须与 xiu_method 匹配' },
+    node_arrangement: { type: 'string', enum: ['south_north', 'north_south'], description: '罗睺/计都南北交点排列' },
+    node_calculation: { type: 'string', enum: ['mean', 'fitted'], description: '罗计计算：平均交点或瞬时轨道面拟合交点' },
+    apogee_calculation: { type: 'string', enum: ['mean', 'fitted'], description: '月孛计算：平均远地点或相邻真实远地点插值' },
+    ziqi_calculation: { type: 'string', enum: ['equatorial_uniform', 'ecliptic_projection'], description: '紫炁沿赤道匀行，或沿黄道运行后投影赤道' },
+    jieqi_method: { type: 'string', enum: ['true', 'mean'], description: '节气计算：太阳真实黄经定气，或冬至起算的回归年均分平气' },
+    day_night_method: { type: 'string', enum: ['sunrise_sunset', 'sunrise_sunset_shichen', 'mao_day_you_night'], description: '昼夜判定：日出没时刻、日出没时辰或卯昼酉夜' },
+    dingxing_tolerance: { type: 'number', minimum: 0, maximum: 30, description: '顶星容许度，默认 1.5°' },
+    tongluo_tolerance: { type: 'number', minimum: 0, maximum: 10, description: '同络容许度，默认 2°' },
+    ming_gong_method: { type: 'string', enum: ['sun_to_mao', 'sun_to_sunrise', 'horizon_rising', 'rising_with_sun'], description: '命宫起法：日到卯、日到日出、地平东升点、升点宫配太阳宫度' },
+    shen_gong_method: { type: 'string', enum: ['moon_is_shen', 'moon_to_you', 'moon_to_moonrise', 'moon_to_sunset'], description: '身宫起法：月为身、月到酉、月到月出、月到日没' },
+    child_limit: { type: 'number', enum: [9, 10], description: '童限基数，默认实岁制 9' },
+    reference_date: { type: 'string', description: '本命盘限运定位参考日 YYYY-MM-DD；默认今日' },
+    reference_time: { type: 'string', description: '限运定位参考时间 HH:mm[:ss]' },
+    dst_adjust: { type: 'boolean', description: '是否按中国 1986—1991 夏令时表校正' },
+    distinguish_zi_hour: { type: 'boolean', description: '区分早晚子时；默认 true，对应 sect2' },
+    args: { type: 'array', items: { type: 'string' }, deprecated: true, description: '兼容旧调用：[YYYY-MM-DD, HH:mm, 经度, 纬度(可选)]' }
+  },
+  anyOf: [
+    { required: ['birth_date', 'birth_time', 'birth_lon', 'birth_lat'] },
+    { required: ['args'] }
+  ]
+};
+
+const QIZHENG_LIUNIAN_SCHEMA = {
+  ...QIZHENG_SCHEMA,
+  properties: {
+    ...QIZHENG_SCHEMA.properties,
+    liunian_year: { type: 'integer', minimum: 1600, maximum: 2600, description: '要推演的明确流年' },
+    liuyue: { type: 'integer', minimum: 1, maximum: 12, description: '公历月；默认出生月' },
+    liuri: { type: 'integer', minimum: 1, maximum: 31, description: '公历日；默认出生日期并自动处理月末' },
+    liushi: { type: 'string', description: '流时 HH:mm[:ss]；默认出生时间' }
+  },
+  required: ['liunian_year']
+};
+
 // 占卜类工具：node 子进程跑 divination/ 下对应脚本
 const DIV_TOOLS = [
   { name: 'div_liuyao', script: 'liuyao.js', description: '六爻占卜：单事吉凶决断。args 可传 [爻码(6位数字,0=阳不动,1=阴不动,2=阳动,3=阴动), 问题]，不传则模拟摇卦。', example: ['010203', '婚姻'] },
@@ -54,7 +107,8 @@ const DIV_TOOLS = [
   { name: 'div_zhuanshi', script: 'zhuanshi.js', description: '择吉选日（建除十二神+彭祖百忌+多因子评分）。args: ["best"(可选), YYYY-MM, 活动类型(开业/搬家/签约/订婚/装修/出行/结婚/祭祀/求财/上任), 可选八字]。', example: ['best', '2026-09', '开业'] },
   { name: 'div_daily', script: 'daily-fortune.js', description: '每日运程：综合指数、穿衣颜色、宜忌、吉时。args 可传 [八字]，不传为通用日运。', example: [] },
   { name: 'div_daliuren', script: 'daliuren.cjs', description: '大六壬起课（基础版）：月将/天地盘/四课/九宗门三传/天将/六亲/遁干。args: [YYYY-MM-DD(可选), 时辰(地支或0-23,可选), 月将(可选)]。', example: ['2026-08-29', '16'] },
-  { name: 'div_qizheng', script: 'qizheng.cjs', description: '七政四余星盘：日月五星+四余的黄经/二十八宿/十二宫/宫主（astronomy-engine 天文计算）。args: [YYYY-MM-DD(可选), HH:mm(可选), 经度(可选)]。', example: ['2026-08-29', '18:00', '112.59'] }
+  { name: 'div_qizheng', script: 'qizheng.cjs', description: '专业七政四余本命盘：九种今古宿/郑案/果老盘制、mean/fitted 四余、庙旺、化曜神煞、四柱节气、童限、洞微大限、小限及 120 年流年时间轴；不依赖 Swiss Ephemeris。', inputSchema: QIZHENG_SCHEMA, example: ['2026-08-29', '18:00', '112.59', '31.17'] },
+  { name: 'div_qizheng_liunian', script: 'qizheng.cjs', description: '专业七政四余流年盘：必须给出明确 liunian_year，可选流月/流日/流时；返回流曜、流年化曜神煞、小限月限、洞微限和流年时间轴交点。', inputSchema: QIZHENG_LIUNIAN_SCHEMA }
 ];
 
 function runDiv(script, args) {
@@ -81,7 +135,7 @@ rl.on('line', async line => {
           tools: [TOOL, CITE_TOOL, ...DIV_TOOLS.map(t => ({
             name: t.name,
             description: t.description,
-            inputSchema: { type: 'object', properties: { args: { type: 'array', items: { type: 'string' }, description: '位置参数，按工具说明顺序传入' } } }
+            inputSchema: t.inputSchema || { type: 'object', properties: { args: { type: 'array', items: { type: 'string' }, description: '位置参数，按工具说明顺序传入' } } }
           }))]
         }
       });
@@ -103,6 +157,24 @@ rl.on('line', async line => {
           send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: JSON.stringify(rs, null, 2) + '\n\n格式化:\n' + (format(rs) || '（未命中引文）') }] } });
         } catch (e) {
           send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: '引文检索失败: ' + e.message }], isError: true } });
+        }
+      } else if (name === 'div_qizheng') {
+        try {
+          const legacy = Array.isArray(a.args) ? {
+            birth_date: a.args[0], birth_time: a.args[1] || '12:00', birth_lon: Number(a.args[2] ?? 120),
+            birth_lat: Number(a.args[3] ?? 0), timezone: 8, gender: 'male', xiu_method: 'huangdaohuigui', coord_system: 'huangdao'
+          } : a;
+          const result = calculateQiZhengChart(legacy);
+          send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] } });
+        } catch (e) {
+          send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: '七政四余排盘失败: ' + e.message }], isError: true } });
+        }
+      } else if (name === 'div_qizheng_liunian') {
+        try {
+          const result = calculateQiZhengLiunian(a);
+          send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] } });
+        } catch (e) {
+          send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: '七政四余流年排盘失败: ' + e.message }], isError: true } });
         }
       } else {
         const t = DIV_TOOLS.find(d => d.name === name);
